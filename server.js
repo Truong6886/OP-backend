@@ -77,7 +77,7 @@ async function addRowToSheet(data) {
         data.HinhThucID || '',
         data.ChonNgay || '',
         data.Gio || '',
-        new Date().toLocaleString()
+        new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
     ]];
 
     console.log('📤 Gửi lên Google Sheets:', values[0]);
