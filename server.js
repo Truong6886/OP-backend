@@ -200,5 +200,35 @@ app.post('/api/tuvandichvu', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+app.post('/api/tuvandichvu', async (req, res) => {
+    let { TenDichVu, HoTen, Email, MaVung, SoDienThoai } = req.body;
+
+    if (!TenDichVu || !HoTen || !Email || !MaVung || !SoDienThoai) {
+        return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
+    }
+
+    // Chuẩn hóa số điện thoại và mã vùng
+    ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
+
+    try {
+        await addRowToSheet({
+            TenDichVu,
+            TenHinhThuc: '', 
+            HoTen,
+            Email,
+            MaVung,
+            SoDienThoai,
+            TieuDe: '',
+            NoiDung: '',
+            HinhThucID: '',
+            ChonNgay: '',
+            Gio: ''
+        });
+
+        res.json({ message: '✅ Lưu yêu cầu tư vấn dịch vụ thành công!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
 const port = 3000;
 app.listen(port, () => console.log(`Server chạy port ${port}`));
