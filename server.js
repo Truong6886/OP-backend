@@ -9,7 +9,7 @@ const HINH_THUC_MAP = {
     3: 'Trực tiếp'
 };
 app.use(bodyParser.json());
-app.use(cors({ origin: 'https://onepass-two.vercel.app' }));
+app.use(cors({ origin: 'https://onepass-xi.vercel.app' }));
 
 
 const SHEET_ID = '1JCULUXyRO5k3LDx_z2z0oCaUWZTNJzmiFzilXIbaq38';
