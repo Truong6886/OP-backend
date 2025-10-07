@@ -12,14 +12,11 @@ app.use(bodyParser.json());
 app.use(cors({ origin: 'https://onepass-xi.vercel.app' }));
 
 
-const SHEET_ID = '1JCULUXyRO5k3LDx_z2z0oCaUWZTNJzmiFzilXIbaq38';
-const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_KEY.replace(/\\n/g, '\n'));
-
+const SERVICE_ACCOUNT_FILE = process.env.GOOGLE_SERVICE_KEY; 
 const auth = new google.auth.GoogleAuth({
-    credentials: serviceAccount,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    keyFile: SERVICE_ACCOUNT_FILE, 
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'] 
 });
-
 const sheets = google.sheets({ version: 'v4', auth });
 
 
