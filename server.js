@@ -2,28 +2,28 @@ const { google } = require('googleapis');
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+
 const app = express();
+
 const HINH_THUC_MAP = {
     1: 'Gọi điện',
     2: 'Email',
     3: 'Trực tiếp'
 };
+
 app.use(bodyParser.json());
 app.use(cors({ origin: 'https://onepass-xi.vercel.app' }));
 
-
 const SHEET_ID = '1JCULUXyRO5k3LDx_z2z0oCaUWZTNJzmiFzilXIbaq38';
-const SERVICE_ACCOUNT_FILE = process.env.GOOGLE_SERVICE_KEY;
 
 const auth = new google.auth.GoogleAuth({
     credentials: JSON.parse(process.env.GOOGLE_SERVICE_KEY),
     scopes: ['https://www.googleapis.com/auth/spreadsheets']
 });
+
 const sheets = google.sheets({ version: 'v4', auth });
 
-
 const HEADER = ['TenDichVu','TenHinhThuc','HoTen','Email','MaVung','SoDienThoai','TieuDe','NoiDung','HinhThucID','ChonNgay','Gio','NgayTao'];
-
 
 async function ensureHeader() {
     try {
@@ -54,13 +54,11 @@ function formatPhone(maVung, soDienThoai) {
     let sd = String(soDienThoai).trim();
     if (!sd.startsWith('0')) sd = '0' + sd;
 
-
     mv = `'${mv}`;
     sd = `'${sd}`;
 
     return { MaVung: mv, SoDienThoai: sd };
 }
-
 
 async function addRowToSheet(data) {
     await ensureHeader();
@@ -99,14 +97,25 @@ app.post('/api/tuvan', async (req, res) => {
     ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
 
     try {
-        await addRowToSheet({ TenDichVu, TenHinhThuc:'', HoTen, Email:'', MaVung, SoDienThoai, TieuDe:'', NoiDung:'', HinhThucID:'', ChonNgay:'', Gio:'' });
+        await addRowToSheet({
+            TenDichVu,
+            TenHinhThuc:'',
+            HoTen,
+            Email:'',
+            MaVung,
+            SoDienThoai,
+            TieuDe:'',
+            NoiDung:'',
+            HinhThucID:'',
+            ChonNgay:'',
+            Gio:''
+        });
         res.json({ message: '✅ Lưu vào Google Sheet thành công!' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
-
 
 app.post('/api/tuvangoidien', async (req, res) => {
     let { TenDichVu, HoTen, Email, MaVung, SoDienThoai, HinhThucID } = req.body;
@@ -137,6 +146,7 @@ app.post('/api/tuvangoidien', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
 app.post('/api/tuvanemail', async (req, res) => {
     let { TenDichVu, HoTen, Email, MaVung, SoDienThoai, TieuDe, NoiDung, HinhThucID } = req.body;
     if (!HoTen || !MaVung || !SoDienThoai || !Email || !TieuDe || !NoiDung)
@@ -144,15 +154,27 @@ app.post('/api/tuvanemail', async (req, res) => {
 
     ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
     HinhThucID = HinhThucID || 2; 
+
     try {
-        await addRowToSheet({ TenDichVu: TenDichVu || '', TenHinhThuc:'', HoTen, Email, MaVung, SoDienThoai, TieuDe, NoiDung, HinhThucID, ChonNgay:'', Gio:'' });
+        await addRowToSheet({
+            TenDichVu: TenDichVu || '',
+            TenHinhThuc:'',
+            HoTen,
+            Email,
+            MaVung,
+            SoDienThoai,
+            TieuDe,
+            NoiDung,
+            HinhThucID,
+            ChonNgay:'',
+            Gio:''
+        });
         res.json({ message: '✅ Lưu vào Google Sheet thành công!' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
-
 
 app.post('/api/tuvantructiep', async (req, res) => {
     let { TenDichVu, HoTen, Email, MaVung, SoDienThoai, ChonNgay, Gio, HinhThucID } = req.body;
@@ -161,14 +183,28 @@ app.post('/api/tuvantructiep', async (req, res) => {
 
     ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
     HinhThucID = HinhThucID || 3; 
+
     try {
-        await addRowToSheet({ TenDichVu: TenDichVu || '', TenHinhThuc:'', HoTen, Email, MaVung, SoDienThoai, TieuDe:'', NoiDung:'', HinhThucID, ChonNgay, Gio });
+        await addRowToSheet({
+            TenDichVu: TenDichVu || '',
+            TenHinhThuc:'',
+            HoTen,
+            Email,
+            MaVung,
+            SoDienThoai,
+            TieuDe:'',
+            NoiDung:'',
+            HinhThucID,
+            ChonNgay,
+            Gio
+        });
         res.json({ message: '✅ Lưu vào Google Sheet thành công!' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
+
 app.post('/api/tuvandichvu', async (req, res) => {
     let { TenDichVu, HoTen, Email, MaVung, SoDienThoai } = req.body;
 
@@ -176,13 +212,12 @@ app.post('/api/tuvandichvu', async (req, res) => {
         return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
     }
 
-    // Chuẩn hóa số điện thoại và mã vùng
     ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
 
     try {
         await addRowToSheet({
             TenDichVu,
-            TenHinhThuc: '', 
+            TenHinhThuc: '',
             HoTen,
             Email,
             MaVung,
@@ -193,42 +228,12 @@ app.post('/api/tuvandichvu', async (req, res) => {
             ChonNgay: '',
             Gio: ''
         });
-
         res.json({ message: '✅ Lưu yêu cầu tư vấn dịch vụ thành công!' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
-app.post('/api/tuvandichvu', async (req, res) => {
-    let { TenDichVu, HoTen, Email, MaVung, SoDienThoai } = req.body;
 
-    if (!TenDichVu || !HoTen || !Email || !MaVung || !SoDienThoai) {
-        return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
-    }
-
-    // Chuẩn hóa số điện thoại và mã vùng
-    ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
-
-    try {
-        await addRowToSheet({
-            TenDichVu,
-            TenHinhThuc: '', 
-            HoTen,
-            Email,
-            MaVung,
-            SoDienThoai,
-            TieuDe: '',
-            NoiDung: '',
-            HinhThucID: '',
-            ChonNgay: '',
-            Gio: ''
-        });
-
-        res.json({ message: '✅ Lưu yêu cầu tư vấn dịch vụ thành công!' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: err.message });
-    }
-const port = 3000;
+const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Server chạy port ${port}`));
