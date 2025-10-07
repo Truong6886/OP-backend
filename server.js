@@ -9,7 +9,7 @@ const HINH_THUC_MAP = {
     3: 'Trực tiếp'
 };
 app.use(bodyParser.json());
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors({ origin: 'https://onepass-azure.vercel.app' }));
 
 
 const SHEET_ID = '1JCULUXyRO5k3LDx_z2z0oCaUWZTNJzmiFzilXIbaq38';
