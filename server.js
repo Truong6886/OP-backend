@@ -10,7 +10,7 @@ const HINH_THUC_MAP = {
 };
 app.use(bodyParser.json());
 app.use(cors({ origin: 'https://onepass-xi.vercel.app' }));
-
+const SHEET_ID = '1JCULUXyRO5k3LDx_z2z0oCaUWZTNJzmiFzilXIbaq38';
 
 const SERVICE_ACCOUNT_FILE = process.env.GOOGLE_SERVICE_KEY; 
 const auth = new google.auth.GoogleAuth({
