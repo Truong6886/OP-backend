@@ -12,7 +12,7 @@ const HINH_THUC_MAP = {
 };
 
 app.use(bodyParser.json());
-app.use(cors({ origin: 'https://onepass-xi.vercel.app' }));
+app.use(cors({ origin: 'https://onepass-xi.vercel.app' ,'http://localhost:5173'}));
 
 const SHEET_ID = '1JCULUXyRO5k3LDx_z2z0oCaUWZTNJzmiFzilXIbaq38';
 
