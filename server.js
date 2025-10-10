@@ -5,243 +5,253 @@ const cors = require('cors');
 
 const app = express();
 
-// Ánh xạ hình thức tư vấn
 const HINH_THUC_MAP = {
-  1: 'Gọi điện',
-  2: 'Email',
-  3: 'Trực tiếp'
+    1: 'Gọi điện',
+    2: 'Email',
+    3: 'Trực tiếp'
 };
 
 app.use(bodyParser.json());
-app.use(cors({
-  origin: 'http://localhost:5173',
-  methods: ['GET', 'POST'],
-}));
-const SHEET_ID = '1JCULUXyRO5k3LDx_z2z0oCaUWZTNJzmiFzilXIbaq38';
-const SERVICE_ACCOUNT_FILE = 'D:/op-backend/tuvankhachhang-8d94df259d6e.json';
+app.use(cors({ origin: 'https://onepass-xi.vercel.app' }));
+app.use(cors({ origin: 'https://www.onepasskr.com' }));
 
+const SHEET_ID = '1JCULUXyRO5k3LDx_z2z0oCaUWZTNJzmiFzilXIbaq38';
 
 const auth = new google.auth.GoogleAuth({
-  keyFile: SERVICE_ACCOUNT_FILE,
-  scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    credentials: JSON.parse(process.env.GOOGLE_SERVICE_KEY),
+    scopes: ['https://www.googleapis.com/auth/spreadsheets']
 });
 
 const sheets = google.sheets({ version: 'v4', auth });
 
-
-const HEADER = [
-  'TenDichVu', 'TenHinhThuc', 'HoTen', 'Email', 'MaVung', 'SoDienThoai',
-  'TieuDe', 'NoiDung', 'HinhThucID', 'ChonNgay', 'Gio', 'NgayTao'
-];
-
+const HEADER = ['TenDichVu','TenHinhThuc','HoTen','Email','MaVung','SoDienThoai','TieuDe','NoiDung','HinhThucID','ChonNgay','Gio','NgayTao'];
 
 async function ensureHeader() {
-  try {
-    const res = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: 'YeuCau!A1:L1'
-    });
+    try {
+        const res = await sheets.spreadsheets.values.get({
+            spreadsheetId: SHEET_ID,
+            range: 'YeuCau!A1:L1'
+        });
 
-    if (!res.data.values || res.data.values.length === 0) {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SHEET_ID,
-        range: 'YeuCau!A1',
-        valueInputOption: 'USER_ENTERED',
-        resource: { values: [HEADER] }
-      });
-      console.log('✅ Header đã được tạo.');
+        if (!res.data.values || res.data.values.length === 0) {
+            await sheets.spreadsheets.values.update({
+                spreadsheetId: SHEET_ID,
+                range: 'YeuCau!A1',
+                valueInputOption: 'USER_ENTERED',
+                resource: { values: [HEADER] }
+            });
+            console.log('✅ Header đã tạo');
+        }
+    } catch (err) {
+        console.error('Lỗi ensureHeader:', err.message);
+        throw err;
     }
-  } catch (err) {
-    console.error('❌ Lỗi ensureHeader:', err);
-    throw err;
-  }
 }
 
-
 function formatPhone(maVung, soDienThoai) {
-  let mv = String(maVung).trim();
-  if (!mv.startsWith('+')) mv = '+' + mv;
+    let mv = String(maVung).trim();
+    if (!mv.startsWith('+')) mv = '+' + mv;
 
-  let sd = String(soDienThoai).trim();
-  if (!sd.startsWith('0')) sd = '0' + sd;
+    let sd = String(soDienThoai).trim();
+    if (!sd.startsWith('0')) sd = '0' + sd;
 
-  
-  mv = `'${mv}`;
-  sd = `'${sd}`;
+    mv = `'${mv}`;
+    sd = `'${sd}`;
 
-  return { MaVung: mv, SoDienThoai: sd };
+    return { MaVung: mv, SoDienThoai: sd };
 }
 
 async function addRowToSheet(data) {
-  await ensureHeader();
+    await ensureHeader();
 
-  const values = [[
-    data.TenDichVu || '',
-    data.TenHinhThuc || '',
-    data.HoTen || '',
-    data.Email || '',
-    data.MaVung || '',
-    data.SoDienThoai || '',
-    data.TieuDe || '',
-    data.NoiDung || '',
-    data.HinhThucID || '',
-    data.ChonNgay || '',
-    data.Gio || '',
-    new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
-  ]];
+    const values = [[
+        data.TenDichVu || '',
+        data.TenHinhThuc || '',
+        data.HoTen || '',
+        data.Email || '',
+        data.MaVung || '',
+        data.SoDienThoai || '',
+        data.TieuDe || '',
+        data.NoiDung || '',
+        data.HinhThucID || '',
+        data.ChonNgay || '',
+        data.Gio || '',
+        new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+    ]];
 
-  console.log('📤 Gửi lên Google Sheets:', values[0]);
+    console.log('📤 Gửi lên Google Sheets:', values[0]);
 
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SHEET_ID,
-    range: 'YeuCau!A2',
-    valueInputOption: 'USER_ENTERED',
-    resource: { values }
-  });
+    await sheets.spreadsheets.values.append({
+        spreadsheetId: SHEET_ID,
+        range: 'YeuCau!A2',
+        valueInputOption: 'USER_ENTERED',
+        resource: { values }
+    });
 }
 
 
 app.post('/api/tuvan', async (req, res) => {
-  let { TenDichVu, HoTen, MaVung, SoDienThoai } = req.body;
-  if (!TenDichVu || !HoTen || !MaVung || !SoDienThoai)
-    return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
+    let { TenDichVu, HoTen, MaVung, SoDienThoai } = req.body;
+    if (!TenDichVu || !HoTen || !MaVung || !SoDienThoai)
+        return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
 
-  ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
+    ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
 
-  try {
-    await addRowToSheet({ TenDichVu, TenHinhThuc: '', HoTen, Email: '', MaVung, SoDienThoai });
-    res.json({ message: '✅ Lưu vào Google Sheet thành công!' });
-  } catch (err) {
-    console.error('🔥 Lỗi /api/tuvan:', err);
-    res.status(500).json({ error: err.message });
-  }
+    try {
+        await addRowToSheet({
+            TenDichVu,
+            TenHinhThuc:'',
+            HoTen,
+            Email:'',
+            MaVung,
+            SoDienThoai,
+            TieuDe:'',
+            NoiDung:'',
+            HinhThucID:'',
+            ChonNgay:'',
+            Gio:''
+        });
+        res.json({ message: '✅ Lưu vào Google Sheet thành công!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
 });
-
 
 app.post('/api/tuvangoidien', async (req, res) => {
-  let { TenDichVu, HoTen, Email, MaVung, SoDienThoai, HinhThucID } = req.body;
-  if (!HoTen || !MaVung || !SoDienThoai || !Email)
-    return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
+    let { TenDichVu, HoTen, Email, MaVung, SoDienThoai, HinhThucID } = req.body;
+    if (!HoTen || !MaVung || !SoDienThoai || !Email)
+        return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
 
-  ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
-  HinhThucID = HinhThucID || 1;
-  const TenHinhThuc = HINH_THUC_MAP[HinhThucID];
+    ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
+    HinhThucID = HinhThucID || 1; 
+    const TenHinhThuc = HINH_THUC_MAP[HinhThucID];
 
-  try {
-    await addRowToSheet({
-      TenDichVu: TenDichVu || '',
-      TenHinhThuc,
-      HoTen,
-      Email,
-      MaVung,
-      SoDienThoai,
-      HinhThucID
-    });
-    res.json({ message: '✅ Lưu vào Google Sheet thành công!' });
-  } catch (err) {
-    console.error('🔥 Lỗi /api/tuvangoidien:', err);
-    res.status(500).json({ error: err.message });
-  }
+    try {
+        await addRowToSheet({
+            TenDichVu: TenDichVu || '',
+            TenHinhThuc,
+            HoTen,
+            Email,
+            MaVung,
+            SoDienThoai,
+            TieuDe: '',
+            NoiDung: '',
+            HinhThucID,
+            ChonNgay: '',
+            Gio: ''
+        });
+        res.json({ message: '✅ Lưu vào Google Sheet thành công!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
-
 app.post('/api/tuvanemail', async (req, res) => {
-  let { TenDichVu, HoTen, Email, MaVung, SoDienThoai, TieuDe, NoiDung, HinhThucID } = req.body;
-  if (!HoTen || !MaVung || !SoDienThoai || !Email || !TieuDe || !NoiDung)
-    return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
+    let { TenDichVu, HoTen, Email, MaVung, SoDienThoai, TieuDe, NoiDung, HinhThucID } = req.body;
+    if (!HoTen || !MaVung || !SoDienThoai || !Email || !TieuDe || !NoiDung)
+        return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
 
-  ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
-  HinhThucID = HinhThucID || 2;
-  const TenHinhThuc = HINH_THUC_MAP[HinhThucID];
+    ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
+    HinhThucID = HinhThucID || 2; 
 
-  try {
-    await addRowToSheet({
-      TenDichVu: TenDichVu || '',
-      TenHinhThuc,
-      HoTen,
-      Email,
-      MaVung,
-      SoDienThoai,
-      TieuDe,
-      NoiDung,
-      HinhThucID
-    });
-    res.json({ message: '✅ Lưu vào Google Sheet thành công!' });
-  } catch (err) {
-    console.error('🔥 Lỗi /api/tuvanemail:', err);
-    res.status(500).json({ error: err.message });
-  }
+    try {
+        await addRowToSheet({
+            TenDichVu: TenDichVu || '',
+            TenHinhThuc:'',
+            HoTen,
+            Email,
+            MaVung,
+            SoDienThoai,
+            TieuDe,
+            NoiDung,
+            HinhThucID,
+            ChonNgay:'',
+            Gio:''
+        });
+        res.json({ message: '✅ Lưu vào Google Sheet thành công!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.post('/api/tuvantructiep', async (req, res) => {
-  let { TenDichVu, HoTen, Email, MaVung, SoDienThoai, ChonNgay, Gio, HinhThucID } = req.body;
-  if (!HoTen || !MaVung || !SoDienThoai || !Email || !ChonNgay || !Gio)
-    return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
+    let { TenDichVu, HoTen, Email, MaVung, SoDienThoai, ChonNgay, Gio, HinhThucID } = req.body;
+    if (!HoTen || !MaVung || !SoDienThoai || !Email || !ChonNgay || !Gio)
+        return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
 
-  ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
-  HinhThucID = HinhThucID || 3;
-  const TenHinhThuc = HINH_THUC_MAP[HinhThucID];
+    ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
+    HinhThucID = HinhThucID || 3; 
 
-  try {
-    await addRowToSheet({
-      TenDichVu: TenDichVu || '',
-      TenHinhThuc,
-      HoTen,
-      Email,
-      MaVung,
-      SoDienThoai,
-      HinhThucID,
-      ChonNgay,
-      Gio
-    });
-    res.json({ message: '✅ Lưu vào Google Sheet thành công!' });
-  } catch (err) {
-    console.error('🔥 Lỗi /api/tuvantructiep:', err);
-    res.status(500).json({ error: err.message });
-  }
+    try {
+        await addRowToSheet({
+            TenDichVu: TenDichVu || '',
+            TenHinhThuc:'',
+            HoTen,
+            Email,
+            MaVung,
+            SoDienThoai,
+            TieuDe:'',
+            NoiDung:'',
+            HinhThucID,
+            ChonNgay,
+            Gio
+        });
+        res.json({ message: '✅ Lưu vào Google Sheet thành công!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
-
 app.post('/api/tuvandichvu', async (req, res) => {
-  let { TenDichVu, HoTen, Email, MaVung, SoDienThoai } = req.body;
+    let { TenDichVu, HoTen, Email, MaVung, SoDienThoai } = req.body;
 
-  if (!TenDichVu || !HoTen || !Email || !MaVung || !SoDienThoai)
-    return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
+    if (!TenDichVu || !HoTen || !Email || !MaVung || !SoDienThoai) {
+        return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
+    }
 
-  ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
+    ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
 
-  try {
-    await addRowToSheet({
-      TenDichVu,
-      TenHinhThuc: '',
-      HoTen,
-      Email,
-      MaVung,
-      SoDienThoai
-    });
-    res.json({ message: '✅ Lưu yêu cầu tư vấn dịch vụ thành công!' });
-  } catch (err) {
-    console.error('🔥 Lỗi /api/tuvandichvu:', err);
-    res.status(500).json({ error: err.message });
-  }
+    try {
+        await addRowToSheet({
+            TenDichVu,
+            TenHinhThuc: '',
+            HoTen,
+            Email,
+            MaVung,
+            SoDienThoai,
+            TieuDe: '',
+            NoiDung: '',
+            HinhThucID: '',
+            ChonNgay: '',
+            Gio: ''
+        });
+        res.json({ message: '✅ Lưu yêu cầu tư vấn dịch vụ thành công!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
 });
 app.post('/api/save-email', async (req, res) => {
   const { email } = req.body;
 
-
+  // 🔹 Kiểm tra dữ liệu đầu vào
   if (!email || !email.includes('@')) {
     return res.status(400).json({ error: 'Email không hợp lệ.' });
   }
 
   try {
-
+    // 🔹 Khởi tạo Google Sheets API
     const client = await auth.getClient();
     const sheets = google.sheets({ version: 'v4', auth: client });
 
     const SHEET_ID = '1JCULUXyRO5k3LDx_z2z0oCaUWZTNJzmiFzilXIbaq38';
     const SHEET_NAME = 'DanhSachEmail';
 
-
+    // 🔹 Kiểm tra sheet tồn tại chưa
     try {
       await sheets.spreadsheets.get({
         spreadsheetId: SHEET_ID,
@@ -252,6 +262,7 @@ app.post('/api/save-email', async (req, res) => {
       return res.status(400).json({ error: `Sheet "${SHEET_NAME}" không tồn tại.` });
     }
 
+    // 🔹 Kiểm tra header (Email / Time)
     const readRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A1:B1`,
@@ -276,7 +287,7 @@ app.post('/api/save-email', async (req, res) => {
       console.log('✅ Header được thêm mới vào sheet.');
     }
 
-
+    // 🔹 Ghi email mới
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A:B`,
@@ -298,7 +309,5 @@ app.post('/api/save-email', async (req, res) => {
     // });
   }
 });
-
-
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`🚀 Server chạy tại port ${port}`));
+app.listen(port, () => console.log(`Server chạy port ${port}`));
