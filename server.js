@@ -237,20 +237,18 @@ app.post('/api/tuvandichvu', async (req, res) => {
 app.post('/api/save-email', async (req, res) => {
   const { email } = req.body;
 
-  // 🔹 Kiểm tra dữ liệu đầu vào
   if (!email || !email.includes('@')) {
     return res.status(400).json({ error: 'Email không hợp lệ.' });
   }
 
   try {
-    // 🔹 Khởi tạo Google Sheets API
     const client = await auth.getClient();
     const sheets = google.sheets({ version: 'v4', auth: client });
 
     const SHEET_ID = '1JCULUXyRO5k3LDx_z2z0oCaUWZTNJzmiFzilXIbaq38';
     const SHEET_NAME = 'DanhSachEmail';
 
-    // 🔹 Kiểm tra sheet tồn tại chưa
+    // Kiểm tra sheet tồn tại
     try {
       await sheets.spreadsheets.get({
         spreadsheetId: SHEET_ID,
@@ -261,7 +259,7 @@ app.post('/api/save-email', async (req, res) => {
       return res.status(400).json({ error: `Sheet "${SHEET_NAME}" không tồn tại.` });
     }
 
-    // 🔹 Kiểm tra header (Email / Time)
+    // Kiểm tra hoặc tạo header
     const readRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A1:B1`,
@@ -273,7 +271,6 @@ app.post('/api/save-email', async (req, res) => {
       rows[0][0]?.toLowerCase().includes('email') &&
       rows[0][1]?.toLowerCase().includes('time');
 
-    // 🔹 Nếu chưa có header → tạo header
     if (!hasHeader) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
@@ -286,7 +283,7 @@ app.post('/api/save-email', async (req, res) => {
       console.log('✅ Header được thêm mới vào sheet.');
     }
 
-    // 🔹 Ghi email mới
+    // Ghi email vào Google Sheets
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A:B`,
@@ -299,19 +296,17 @@ app.post('/api/save-email', async (req, res) => {
 
     console.log(`✅ Email đã được lưu: ${email}`);
 
-    // ✅ Phản hồi thành công về client
+    // 🔹 Trả phản hồi cho frontend
     return res.json({ message: '✅ Email đã được lưu thành công!' });
-
   } catch (err) {
     console.error('🔥 Lỗi /api/save-email:', err.message);
-
-    // ✅ Phản hồi lỗi rõ ràng
     return res.status(500).json({
       error: '❌ Không thể lưu email, vui lòng thử lại sau.',
       details: err.message,
     });
   }
 });
+
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Server chạy port ${port}`));
