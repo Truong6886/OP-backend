@@ -117,7 +117,7 @@ async function addRowToSheet(data) {
   console.log("📤 Ghi vào Google Sheet:", values[0]);
 }
 
-// === 🔹 Các API tư vấn ===
+// === 🔹 /api/tuvan ===
 app.post("/api/tuvan", async (req, res) => {
   let { TenDichVu, HoTen, MaVung, SoDienThoai } = req.body;
   if (!TenDichVu || !HoTen || !MaVung || !SoDienThoai)
@@ -146,6 +146,7 @@ app.post("/api/tuvan", async (req, res) => {
   }
 });
 
+// === 🔹 /api/tuvangoidien ===
 app.post("/api/tuvangoidien", async (req, res) => {
   let { TenDichVu, HoTen, Email, MaVung, SoDienThoai, HinhThucID } = req.body;
   if (!HoTen || !MaVung || !SoDienThoai || !Email)
@@ -176,6 +177,38 @@ app.post("/api/tuvangoidien", async (req, res) => {
   }
 });
 
+// === 🔹 /api/tuvanemail ===
+app.post("/api/tuvanemail", async (req, res) => {
+  let { TenDichVu, HoTen, Email, MaVung, SoDienThoai, TieuDe, NoiDung, HinhThucID } = req.body;
+  if (!HoTen || !MaVung || !SoDienThoai || !Email || !TieuDe || !NoiDung)
+    return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
+
+  ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
+  HinhThucID = HinhThucID || 2;
+  const TenHinhThuc = HINH_THUC_MAP[HinhThucID];
+
+  try {
+    await addRowToSheet({
+      TenDichVu: TenDichVu || "",
+      TenHinhThuc,
+      HoTen,
+      Email,
+      MaVung,
+      SoDienThoai,
+      TieuDe,
+      NoiDung,
+      HinhThucID,
+      ChonNgay: "",
+      Gio: "",
+    });
+    res.json({ message: "✅ Lưu tư vấn qua Email thành công!" });
+  } catch (err) {
+    console.error("❌ Lỗi /api/tuvanemail:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// === 🔹 /api/save-email ===
 app.post("/api/save-email", async (req, res) => {
   const { email } = req.body;
   if (!email || !email.includes("@"))
@@ -185,7 +218,6 @@ app.post("/api/save-email", async (req, res) => {
     const sheetsClient = google.sheets({ version: "v4", auth });
     const SHEET_NAME = "DanhSachEmail";
 
-    // Kiểm tra hoặc tạo header
     const readRes = await sheetsClient.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A1:B1`,
@@ -207,7 +239,6 @@ app.post("/api/save-email", async (req, res) => {
       console.log("✅ Header được thêm cho DanhSachEmail");
     }
 
-    // Ghi dữ liệu mới
     await sheetsClient.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A:B`,
