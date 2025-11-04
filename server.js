@@ -293,20 +293,25 @@ app.post('/api/save-email', async (req, res) => {
       valueInputOption: 'RAW',
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
-        values: [[email, new Date().toLocaleString('en-US')]],
+        values: [[email, new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' })]],
       },
     });
 
     console.log(`✅ Email đã được lưu: ${email}`);
-    // res.json({ message: '✅ Email đã được lưu thành công!' });
+
+    // ✅ Phản hồi thành công về client
+    return res.json({ message: '✅ Email đã được lưu thành công!' });
 
   } catch (err) {
     console.error('🔥 Lỗi /api/save-email:', err.message);
-    // res.status(500).json({
-    //   error: '❌ Không thể lưu email, vui lòng thử lại sau.',
-    //   details: err.message,
-    // });
+
+    // ✅ Phản hồi lỗi rõ ràng
+    return res.status(500).json({
+      error: '❌ Không thể lưu email, vui lòng thử lại sau.',
+      details: err.message,
+    });
   }
 });
+
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Server chạy port ${port}`));
