@@ -234,33 +234,18 @@ app.post('/api/tuvandichvu', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-app.post('/api/save-email', async (req, res) => {
+app.post("/api/save-email", async (req, res) => {
   const { email } = req.body;
-
-  if (!email || !email.includes('@')) {
-    return res.status(400).json({ error: 'Email không hợp lệ.' });
-  }
+  if (!email || !email.includes("@"))
+    return res.status(400).json({ error: "Email không hợp lệ." });
 
   try {
     const client = await auth.getClient();
-    const sheets = google.sheets({ version: 'v4', auth: client });
+    const sheetsClient = google.sheets({ version: "v4", auth: client });
+    const SHEET_NAME = "DanhSachEmail";
 
-    const SHEET_ID = '1JCULUXyRO5k3LDx_z2z0oCaUWZTNJzmiFzilXIbaq38';
-    const SHEET_NAME = 'DanhSachEmail';
-
-    // Kiểm tra sheet tồn tại
-    try {
-      await sheets.spreadsheets.get({
-        spreadsheetId: SHEET_ID,
-        ranges: [SHEET_NAME],
-      });
-    } catch (sheetErr) {
-      console.error(`❌ Sheet "${SHEET_NAME}" không tồn tại.`);
-      return res.status(400).json({ error: `Sheet "${SHEET_NAME}" không tồn tại.` });
-    }
-
-    // Kiểm tra hoặc tạo header
-    const readRes = await sheets.spreadsheets.values.get({
+    // Header
+    const readRes = await sheetsClient.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A1:B1`,
     });
@@ -268,42 +253,35 @@ app.post('/api/save-email', async (req, res) => {
     const rows = readRes.data.values || [];
     const hasHeader =
       rows.length > 0 &&
-      rows[0][0]?.toLowerCase().includes('email') &&
-      rows[0][1]?.toLowerCase().includes('time');
+      rows[0][0]?.toLowerCase().includes("email") &&
+      rows[0][1]?.toLowerCase().includes("time");
 
     if (!hasHeader) {
-      await sheets.spreadsheets.values.update({
+      await sheetsClient.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
         range: `${SHEET_NAME}!A1:B1`,
-        valueInputOption: 'RAW',
-        requestBody: {
-          values: [['Email', 'Time']],
-        },
+        valueInputOption: "RAW",
+        requestBody: { values: [["Email", "Time"]] },
       });
-      console.log('✅ Header được thêm mới vào sheet.');
+      console.log("✅ Header được tạo cho DanhSachEmail");
     }
 
-    // Ghi email vào Google Sheets
-    await sheets.spreadsheets.values.append({
+    // Ghi email
+    await sheetsClient.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A:B`,
-      valueInputOption: 'RAW',
-      insertDataOption: 'INSERT_ROWS',
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
       requestBody: {
-        values: [[email, new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' })]],
+        values: [[email, new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })]],
       },
     });
 
-    console.log(`✅ Email đã được lưu: ${email}`);
-
-    // 🔹 Trả phản hồi cho frontend
-    return res.json({ message: '✅ Email đã được lưu thành công!' });
+    console.log(`✅ Email đã lưu: ${email}`);
+    res.json({ message: "✅ Email đã được lưu thành công!" });
   } catch (err) {
-    console.error('🔥 Lỗi /api/save-email:', err.message);
-    return res.status(500).json({
-      error: '❌ Không thể lưu email, vui lòng thử lại sau.',
-      details: err.message,
-    });
+    console.error("🔥 Lỗi /api/save-email:", err.message);
+    res.status(500).json({ error: "Không thể lưu email." });
   }
 });
 
