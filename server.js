@@ -38,84 +38,63 @@ const sheets = google.sheets({ version: "v4", auth });
 
 // Header sheet chính
 const HEADER = [
-  "TenDichVu",
-  "TenHinhThuc",
-  "HoTen",
-  "Email",
-  "MaVung",
-  "SoDienThoai",
-  "TieuDe",
-  "NoiDung",
-  "HinhThucID",
-  "ChonNgay",
-  "Gio",
-  "NgayTao",
+  'TenDichVu', 'TenHinhThuc', 'HoTen', 'Email', 'MaVung', 'SoDienThoai',
+  'TieuDe', 'NoiDung', 'HinhThucID', 'ChonNgay', 'Gio', 'CoSoTuVan', 'NgayTao'
 ];
 
-// === 🔹 Đảm bảo header tồn tại ===
+// ✅ Hàm đảm bảo header tồn tại trong sheet
 async function ensureHeader() {
   try {
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
-      range: "YeuCau!A1:L1",
+      range: 'YeuCau!A1:M1' // 🔹 Cập nhật phạm vi (M = cột 13)
     });
 
     if (!res.data.values || res.data.values.length === 0) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
-        range: "YeuCau!A1",
-        valueInputOption: "USER_ENTERED",
-        resource: { values: [HEADER] },
+        range: 'YeuCau!A1',
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [HEADER] }
       });
-      console.log("✅ Header đã tạo trên sheet YeuCau");
+      console.log('✅ Header đã được tạo.');
     }
   } catch (err) {
-    console.error("❌ Lỗi ensureHeader:", err.message);
+    console.error('❌ Lỗi ensureHeader:', err);
     throw err;
   }
 }
 
-// === 🔹 Chuẩn hoá số điện thoại ===
-function formatPhone(maVung, soDienThoai) {
-  let mv = String(maVung).trim();
-  if (!mv.startsWith("+")) mv = "+" + mv;
-  let sd = String(soDienThoai).trim();
-  if (!sd.startsWith("0")) sd = "0" + sd;
-  mv = `'${mv}`;
-  sd = `'${sd}`;
-  return { MaVung: mv, SoDienThoai: sd };
-}
-
-// === 🔹 Ghi dòng mới vào Sheet ===
+// ✅ Hàm thêm dòng mới vào sheet có cột "CoSoTuVan"
 async function addRowToSheet(data) {
   await ensureHeader();
 
-  const values = [
-    [
-      data.TenDichVu || "",
-      data.TenHinhThuc || "",
-      data.HoTen || "",
-      data.Email || "",
-      data.MaVung || "",
-      data.SoDienThoai || "",
-      data.TieuDe || "",
-      data.NoiDung || "",
-      data.HinhThucID || "",
-      data.ChonNgay || "",
-      data.Gio || "",
-      new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
-    ],
-  ];
+  const values = [[
+    data.TenDichVu || '',
+    data.TenHinhThuc || '',
+    data.HoTen || '',
+    data.Email || '',
+    data.MaVung || '',
+    data.SoDienThoai || '',
+    data.TieuDe || '',
+    data.NoiDung || '',
+    data.HinhThucID || '',
+    data.ChonNgay || '',
+    data.Gio || '',
+    data.CoSoTuVan || '', // ✅ thêm cột mới
+    new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+  ]];
+
+  console.log('📤 Gửi lên Google Sheets:', values[0]);
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
-    range: "YeuCau!A2",
-    valueInputOption: "USER_ENTERED",
-    resource: { values },
+    range: 'YeuCau!A2',
+    valueInputOption: 'USER_ENTERED',
+    resource: { values }
   });
-
-  console.log("📤 Ghi vào Google Sheet:", values[0]);
 }
+
 
 // === 🔹 /api/tuvan ===
 app.post("/api/tuvan", async (req, res) => {
@@ -207,7 +186,35 @@ app.post("/api/tuvanemail", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+app.post('/api/tuvantructiep', async (req, res) => {
+  let { TenDichVu, HoTen, Email, MaVung, SoDienThoai, ChonNgay, Gio, HinhThucID, CoSoTuVan } = req.body;
 
+  if (!HoTen || !MaVung || !SoDienThoai || !Email || !ChonNgay || !Gio)
+    return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
+
+  ({ MaVung, SoDienThoai } = formatPhone(MaVung, SoDienThoai));
+  HinhThucID = HinhThucID || 3;
+  const TenHinhThuc = HINH_THUC_MAP[HinhThucID];
+
+  try {
+    await addRowToSheet({
+      TenDichVu: TenDichVu || '',
+      TenHinhThuc,
+      HoTen,
+      Email,
+      MaVung,
+      SoDienThoai,
+      HinhThucID,
+      ChonNgay,
+      Gio,
+      CoSoTuVan: CoSoTuVan || ''
+    });
+    res.json({ message: '✅ Lưu vào Google Sheet thành công!' });
+  } catch (err) {
+    console.error('🔥 Lỗi /api/tuvantructiep:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 // === 🔹 /api/save-email ===
 app.post("/api/save-email", async (req, res) => {
   const { email } = req.body;
